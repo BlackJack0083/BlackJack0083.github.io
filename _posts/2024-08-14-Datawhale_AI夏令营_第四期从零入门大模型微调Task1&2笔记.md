@@ -1,4 +1,13 @@
-# 前言
+---
+title: "Datawhale AI 夏令营"
+author: "BlackJack"
+date: "2024.8.14"
+output:
+  html_document:
+  toc: true
+---
+
+## 前言
 
 **之前用百度的千帆训练过一次大模型，当时使用了RAG，这次来探索下使用讯飞的大模型进行训练。**
 
