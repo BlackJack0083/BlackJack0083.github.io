@@ -1,10 +1,10 @@
 ---
-title: "Datawhale AI 夏令营"
-author: "BlackJack"
-date: "2024.8.14"
-output:
-  html_document:
-  toc: true
+title: "2024-08-14-Datawhale_AI夏令营_第四期从零入门大模型微调Task1&2笔记"
+author: "BlackJack0083"
+date: "2024-08-14"
+toc: true
+tags: ["大模型"]
+comments: true
 ---
 
 ## 前言
