@@ -71,17 +71,17 @@ disqus: # fromendworld
 
 # Gitalk
 gitalk:
-  clientID: 062eeb9a0adf39976274
-  clientSecret: 3c319e4cf4a90b70809d7fd1b25e4c6c10376a10
-  repo: goldstine.github.io
-  owner: goldstine
+  clientID: Ov23liTDqkp5bcR0lsRZ
+  clientSecret: c8cca8d3305c139767ad5be7c48ad030d9311db3
+  repo: BlackJack0083.github.io
+  owner: BlackJack0083
 
 # Enter your Google Analytics web tracking code (e.g. UA-2110908-2) to activate tracking
 #google_analytics: 
 
 # Your website URL (e.g. http://barryclark.github.io or http://www.barryclark.co)
 # Used for Sitemap.xml and your RSS feed
-url: https://goldstine.github.io
+url: https://BlackJack0083.github.io
 
 # If you're hosting your site at a Project repository on GitHub pages
 # (http://yourusername.github.io/repository-name)
