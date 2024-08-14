@@ -1,4 +1,5 @@
 **之前用百度的千帆训练过一次大模型，当时使用了RAG，这次来探索下使用讯飞的大模型进行训练。**
+
 **也是第一次参加Datawhale的AI夏令营，有什么写的不好或者有问题的欢迎指出！**
 **代码的注释copy了Datawhale的文档，不过大部分都在下面写了些我自己的理解**
 
@@ -42,27 +43,34 @@
 进入BML codelab，给了我们这些：
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240812110440.png)
 由于在赛题描述中说明数据集为科大讯飞的保密信息，故这里不对数据集进行展示，仅对格式进行说明：
+
 >[!info] 训练集
 > **英语**：共64条数据，数据格式为：阅读文本-选项-答案，数据源来自各年高考英语试题，粗略看了看，ABCD篇似乎都有
 > **语文**：共64条数据，数据格式和数据源同上，内容主要为现代文阅读1和现代文阅读2，但与英语的数据集不同的是，语文的选项和答案里面还有主观题的部分。
 
 >[!info] 测试集/测试样例数据
 >语文和英语一样，只有客观题，数据格式均为 input-target(output)，其中target里面既有对应的问题、选项，还有相应答案。
+
 ## baseline内容
 整个内容大致为：
 - 数据处理
 - 模型微调
 - 本地测试
 - 在线提交
+  
 ### 数据处理
+
 ```python
 !pip install pandas openpyxl
 ```
+
 **解释**: `!` 是一个魔法命令，它让你可以在Jupyter Notebook中直接运行Shell命令。这样，用户可以一边写代码，一边安装必要的库。
+
 - `pandas`：一个用于数据操作和分析的 Python 库，广泛应用于数据科学、金融分析、统计分析等领域。`pandas` 提供了高效的数据结构和数据分析工具，能够轻松处理和分析结构化数据（如表格数据）。详情用法可以看Datawhale的教程[**Joyful Pandas**](https://inter.joyfulpandas.datawhale.club/Home.html)
 - `openpyxl` 一个用于读写 Excel 文件的 Python 库。它支持 Microsoft Excel 2010 及更高版本的 `.xlsx` 文件格式，允许你在 Python 程序中创建、读取、修改和保存 Excel 文件。`openpyxl` 是处理 Excel 表格的常用工具，适合需要自动化处理 Excel 数据的场景。
 
 #### 测试与清洗代码：
+
 ```python
 # coding~
 
@@ -80,8 +88,10 @@ second_row_option_content = df.loc[2, '选项']
 # 显示第二行“选项”列的内容
 print(second_row_option_content)
 ```
+
 `replace`函数：
-1. **`df.replace('．', '.', regex=True)`**:
+
+1. `df.replace('．', '.', regex=True)`:
    - **功能**: 将 `DataFrame` 中的所有 `．`（全角的“点”）替换为 `.`（半角的“点”）。
    - **`regex=True`**: 表示使用正则表达式进行替换，尽管这里并不涉及复杂的正则表达式，但通过指定 `regex=True`，可以让 `replace` 方法更灵活地处理替换操作。
 2. **`df.replace('（', '(', regex=True)`**:
@@ -89,9 +99,12 @@ print(second_row_option_content)
    - **`regex=True`**: 同样，这里使用正则表达式模式进行替换。
 
 这些操作的主要目的是将 `DataFrame` 中的全角字符（常见于日文或中文文本）替换为对应的半角字符。全角字符通常比半角字符占据更多的空间，并且在处理国际化文本时，可能会遇到需要标准化这些字符的情况。使用 `replace` 方法可以快速地替换这些字符，从而实现数据的标准化。
+
 #### 问题抽取
+
 刚刚我们在数据格式里面发现语文试题的训练集里面含有主观题，但是测试集只要求给出客观题及答案，所以我们需要把主观题部分剔除，防止给模型带来不良影响
 这里主要需要使用正则表达式模块`re`
+
 ```python
 def chinese_multiple_choice_questions(questions_with_answers):
     # 输入的题目文本
@@ -155,10 +168,13 @@ def chinese_multiple_choice_questions(questions_with_answers):
     return multiple_choice_questions
     # 返回包含选择题的字典列表，每个字典包含题目和选项。
 ```
+
 这段代码的作用是解析包含选择题和简答题的文本，提取出选择题的内容并返回一个包含题目和选项的字典列表。
 
 `re`模块是Python中用于处理正则表达式的标准库。正则表达式是一种强大的字符串匹配工具，允许用户定义复杂的搜索模式，以便在文本中查找、替换或提取特定的内容。`re`模块提供了一系列函数，用于编译正则表达式、在字符串中查找匹配项、替换字符串中的匹配项等操作。
+
 ##### `re`模块的常用函数
+
 1. **`re.compile(pattern, flags=0)`**:
    - 用于编译正则表达式，返回一个模式对象，可以在后续的匹配操作中重复使用。
    - `pattern`是正则表达式的字符串形式，`flags`是可选参数，用于控制匹配行为（如忽略大小写、多行匹配等）。
@@ -174,8 +190,11 @@ def chinese_multiple_choice_questions(questions_with_answers):
    - 根据正则表达式中的匹配项来拆分字符串，返回一个子串列表。
 6. **`re.sub(pattern, repl, string, count=0, flags=0)`**:
    - 用于替换字符串中所有符合正则表达式的部分，用另一个字符串替换。
+
 ##### `re`模块在代码中的使用
+
 在代码中，`re`模块用于匹配题目和选项：
+
 1. **`question_pattern = re.compile(r'\d+\..*?(?=\d+\.|$)', re.DOTALL)`**:
    - 这一行使用`re.compile`编译了一个正则表达式，用于匹配题目。
    - `\d+\.`匹配数字后跟随一个点字符，`.*?`表示非贪婪匹配任意字符，直到`(?=\d+\.|$)`遇到下一个数字和点字符或字符串结束。
@@ -187,40 +206,60 @@ def chinese_multiple_choice_questions(questions_with_answers):
    - 这一行使用`re.search`在题目字符串中查找是否存在[A-D]，以判断该题目是否为选择题。
 4. **`matches_question = str(id+1)+'.'+ pattern_question.findall(question_text)[0][1]`**:
    - 这行代码的作用是提取题目中的文本部分，并根据循环的索引（`id`）重新编号，然后将编号和题目内容拼接在一起。为了帮助你理解，我们先拆解这行代码并通过一个具体的例子来说明。
+  
 ###### 代码拆解
+
 假设我们有一个题目字符串：
+
 ```python
 question_text = "12. What is the capital of France?"
 ```
+
 匹配过程：
+
 1. **定义正则表达式**:
+
    ```python
    pattern_question = re.compile(r'(\d+)\.(.*)')
    ```
+
 2. **使用 `findall` 提取编号和内容**:
+
    ```python
    matches = pattern_question.findall(question_text)
    # matches = [('12', ' What is the capital of France?')]
    ```
-这里，`matches` 是一个包含一个元组的列表，元组的第一个元素是`12`（题号），第二个元素是` What is the capital of France?`（题目内容）。
+
+这里，`matches` 是一个包含一个元组的列表，元组的第一个元素是`12`（题号），第二个元素是`What is the capital of France?`（题目内容）。
+
 3. **提取题目内容**:
+
    ```python
    question_content = matches[0][1]  # ' What is the capital of France?'
    ```
+
 这里提取了题目的内容部分。
+
 4. **重新编号并拼接**:
+
    ```python
    id = 0  # 假设这是循环的第一次
    matches_question = str(id + 1) + '.' + question_content
    # matches_question = '1. What is the capital of France?'
    ```
+
 最终，`matches_question` 的值是 `'1. What is the capital of France?'`，即将原本题目的编号`12`替换为`1`。
 
 #### 贪婪匹配与非贪婪匹配
+
 在正则表达式中，**贪婪匹配**（greedy matching）和**非贪婪匹配**（non-greedy matching，也称为懒惰匹配，lazy matching）是两种不同的匹配策略，它们决定了正则表达式在匹配时获取多少内容。
+
 ##### 贪婪匹配（Greedy Matching）
+
 贪婪匹配尽可能多地匹配字符。这意味着当有多个可能的匹配时，贪婪模式会尝试匹配尽可能长的字符串。
+
 ###### 例子：
+
 ```python
 import re
 
@@ -232,9 +271,13 @@ print(match.group())  # 输出：123def456
 ```
 
 在这个例子中，`\d+`匹配一个或多个数字字符，`.*`匹配任意数量的任意字符（包括0个），所以贪婪匹配会扩展匹配范围，直到遇到最后一个数字字符。
+
 ##### 非贪婪匹配（Non-greedy Matching）
+
 非贪婪匹配尽可能少地匹配字符，即在能满足匹配条件的情况下，会尝试匹配尽可能短的字符串。在正则表达式中，通常通过在量词后面添加`?`来实现非贪婪匹配。
+
 ###### 例子：
+
 ```python
 import re
 
@@ -246,7 +289,9 @@ print(match.group())  # 输出：123def4
 ```
 
 在这个例子中，`+?`和`*?`是非贪婪的，它们会尽量少地匹配内容。因此，`123`匹配了第一个数字序列，`.*?`匹配了`def`，最后的`\d+?`只匹配了数字`4`。
+
 ###### 匹配过程
+
 1. **首先匹配`\d+?`**：
    - `\d+?`在"123def456"中，从左到右扫描，首先遇到`1`，这是一个数字。因为非贪婪匹配会尽量少地匹配字符，所以它首先尝试只匹配`1`。
    - 然而，正则表达式的其余部分（`.*?\d+?`）需要继续匹配，为了满足整个模式，`1`不足以使整个正则表达式匹配成功。
@@ -256,11 +301,16 @@ print(match.group())  # 输出：123def4
    - `.*?`匹配到`def`后，它会停下尝试，因为后面的`\d+?`需要匹配一个数字。
 3. **最后匹配第二个`\d+?`**：
    - 此时，剩下的字符串是`456`。第二个`\d+?`是非贪婪匹配，它尽量少地匹配数字字符。因此，它只匹配了`4`，因为这已经足够满足整个正则表达式的匹配。
+
 ###### 总结
+
 - 第一个`\d+?`非贪婪匹配最终匹配了`123`，因为这是最少的匹配量，能使后续部分也成功匹配。
 - 第二个`\d+?`非贪婪匹配只匹配了`4`，因为它只需要匹配一个数字来满足正则表达式的整体要求。
+
 #### 抽取问题结果
+
 这部分也是用正则表达式进行处理，不过对于中文试题由于存在简答题，所以需要进行些特别处理：
+
 ```python
 def chinese_multiple_choice_answers(questions_with_answers):
     questions_with_answers = questions_with_answers.replace(" ", "").replace("\n", "")
@@ -292,25 +342,34 @@ def chinese_multiple_choice_answers(questions_with_answers):
         answers.append(f"{id+1}. {sorted_choice_answers[id][1]}")
     return answers
 ```
+
 这里正则表达式的解释：
+
 - `choice_pattern`: 用于匹配选择题答案，例如 "1.A"、"2.BC" 等。`\d+` 匹配数字序号，`[A-Z]+` 匹配一个或多个大写字母（即答案）。
 - `short_pattern`: 用于匹配其他类型的答案，例如填空题或简答题，这些答案中不会有大写字母。这里的 `[^A-Z]+` 匹配**除了大写字母以外的任意字符**。
 `findall`返回的是一个包含元组的列表，每个元组包含两个元素：`index`和`answer`
 例如：
+
 ```python
 choice_matches = [('1', 'A'), ('2', 'BC'), ('3', 'AB')]
 ```
+
 因此列表推导式创建的字典对应的形式为：
+
 ```python
 choice_answers = {1: 'A', 2: 'BC', 3: 'AB'}
 ```
+
 遍历列表时候，将元组的第一个元素赋值给`index`，第二个元素赋值给`answer`
 测试一下是否能真的提取:
 ![image.png|550](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240814102354.png)
+
 #### 对答案列进行处理
+
 ```python
 df['答案_processed'] = df['答案'].map(chinese_multiple_choice_answers)
 ```
+
 这句话是使用 Pandas 的 `map` 函数对数据框 `df` 中的某一列 `答案` 进行处理，并将处理后的结果存储在新列 `答案_processed` 中。
 
 - `df['答案']`: 这是数据框 `df` 中名为 `答案` 的列。假设这一列包含了多个问题的答案字符串。
@@ -318,10 +377,12 @@ df['答案_processed'] = df['答案'].map(chinese_multiple_choice_answers)
 - `df['答案_processed']`: 这表示创建或更新数据框 `df` 中的一个新列，名为 `答案_processed`。这个新列将存储 `chinese_multiple_choice_answers` 函数对 `df['答案']` 中每一个元素处理后的结果。
 
 假设 `df['答案']` 列中的数据如下：
+
 ```plaintext
 1.A 2.BC 3.AB
 4.D 5.AC 6.B
 ```
+
 在应用 `map(chinese_multiple_choice_answers)` 后，`chinese_multiple_choice_answers` 函数会处理每一行的答案字符串，提取并格式化选择题答案，然后将处理后的结果存储到新列 `答案_processed` 中。
 最终，`df` 可能会变成这样：
 
@@ -330,7 +391,9 @@ df['答案_processed'] = df['答案'].map(chinese_multiple_choice_answers)
 | 1.A 2.BC 3.AB | [1. A, 2. BC, 3. AB] |
 | 4.D 5.AC 6.B  | [4. D, 5. AC, 6. B]  |
 这里，`答案_processed` 列中每个元素都是 `chinese_multiple_choice_answers` 函数处理后的结果，通常是一个包含格式化答案的列表。
+
 #### prompt工程
+
 ```Python
 def get_prompt_cn(text):
     prompt = f'''
@@ -348,10 +411,12 @@ def get_prompt_cn(text):
     
     return prompt   
 ```
+
 最开始的prompt不需要更改，可以对回答要求部分进行尝试修改，阅读文本实际上是我们的阅读材料
+
 #### 中文处理主函数
+
 ```python
-```Python
 def process_cn(df): 
     # 定义好返回列表
     res_input = []
@@ -393,14 +458,17 @@ def process_cn(df):
             res_input.append(data_prompt)
         # break
     return res_input,res_output
-    
 ```
+
 将`res`打印出来是这样的：
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240814104500.png)
 可以看到实现了题目编号重新排序，选项重新排序，答案贴在题目和选项后面这三个功能
+
 ### 英语处理
+
 大部分跟中文处理一样，只有一点点微调
 一开始处理的时候看到有个把A换成A的。。。实在没懂为什么这么做，看note才知道原来那个是OCR识别的俄文。。。好吧也是学到了
+
 ```Python
 import pandas as pd
 
@@ -417,8 +485,11 @@ second_row_option_content = df.loc[0, '选项']
 # 显示第二行“选项”列的内容
 print(second_row_option_content)
 ```
+
 #### 问题抽取
+
 这里需要处理的是英语中出现ACBD这种选项乱序的问题
+
 ```Python
 import re
 
@@ -473,14 +544,17 @@ questions = get_questions(text)
 for q in questions:
     print(q)
 ```
+
 看看发生了什么：
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240814110230.png)
 第一个框内容是最原始的数据，发现会有ACBD乱码
 于是先对数据进行简单处理，去掉换行符，得到第二个框内容(注意这一步处理的时候添加了两个空格在每个选项间，后面还需要对这个进行处理)
 用正则表达式进行处理：
+
 ```python
 pattern = re.compile(r'(\d+\..*?)(A\..*?\s{2})([B-D]\..*?\s{2})([B-D]\..*?\s{2})(D\..*?\s{2})', re.DOTALL)
 ```
+
 - `\d+\.`: 匹配题号，例如 "1." 或 "23."。
 - `.*?`: 匹配题号后的题干内容，`?` 是非贪婪匹配。
 - `A\..*?\s{2}`: 匹配选项 A，`A\.` 匹配 "A."，`.*?` 匹配选项内容，`\s{2}` 表示两个空格作为选项之间的分隔符。
@@ -491,19 +565,24 @@ pattern = re.compile(r'(\d+\..*?)(A\..*?\s{2})([B-D]\..*?\s{2})([B-D]\..*?\s{2})
 列表中的每个元素都是一个元组，包含一个匹配的选择题和它的选项。
 
 再对内部内容进行进一步处理：
+
 ```python
 for match in matches:
-	question, option1, option2, option3, option4 = match
-	pattern_question = re.compile(r'(\d+)\.(.*)')
-	question_text = pattern_question.findall(question.strip())[0][1]
+ question, option1, option2, option3, option4 = match
+ pattern_question = re.compile(r'(\d+)\.(.*)')
+ question_text = pattern_question.findall(question.strip())[0][1]
 ```
+
 - 遍历 `matches` 列表中的每个匹配项 `match`，解包为 `question`（题干）和四个选项。
 - 使用正则表达式 `pattern_question` 提取题干中的题号和文本内容，将题号过滤掉，保留纯粹的题目内容。
+  
 ```python
 options = {option1[0]: option1, option2[0]: option2, option3[0]: option3, option4[0]: option4}
 ```
+
 建立字典，其中键是选项字母（A, B, C, D），值是对应的选项内容。
 为啥是这样？举个例子：
+
 ```python
 match = (
     '21. What is an advantage of MacBike?', 
@@ -513,17 +592,22 @@ match = (
     'D. It has over 2,500 rental shops.  '
 )
 ```
+
 在这段代码中，`option1`, `option2`, `option3`, `option4` 分别对应 `match` 中的四个选项：
+
 - `option1 = 'A. It gives children a discount.'`
 - `option2 = 'B. It offers many types of bikes.'`
 - `option3 = 'C. It organizes free cycle tours.'`
 - `option4 = 'D. It has over 2,500 rental shops. '`
+  
 这段代码的目的是创建一个字典 `options`，其中键是选项的标识符（A, B, C, D），而值是完整的选项文本。让我们来看看这段代码是如何工作的：
-1. **`option1[0]: option1`**:
-    - `option1[0]` 提取选项 `option1` 的第一个字符，即 `'A'`。
-    - `option1` 是完整的选项字符串 `'A. It gives children a discount.'`。
-    - 所以字典中的键值对为 `'A': 'A. It gives children a discount.'`。
+
+- **`option1[0]: option1`**:
+  - `option1[0]` 提取选项 `option1` 的第一个字符，即 `'A'`。
+  - `option1` 是完整的选项字符串 `'A. It gives children a discount.'`。
+  - 所以字典中的键值对为 `'A': 'A. It gives children a discount.'`。
 后面的同理，于是得到最终的字典如下：
+
 ```python
 options = {
     'A': 'A. It gives children a discount.',
@@ -534,28 +618,34 @@ options = {
 ```
 
 调整可能出现的乱序：
+
 ```python
 question_dict = {
-	 'question': question_text,
-	  # 这一步就是防止ACBD这种乱序，我们进行重新匹配，将可能是ACBD的数据以首字母按位置排好号 
-	  'options': { 
-		  'A': options.get('A', '').strip(), 
-		  'B': options.get('B', '').strip(), 
-		  'C': options.get('C', '').strip(), 
-		  'D': options.get('D', '').strip() 
-	  } 
+    'question': question_text,
+    # 这一步就是防止ACBD这种乱序，我们进行重新匹配，将可能是ACBD的数据以首字母按位置排好号 
+    'options': { 
+        'A': options.get('A', '').strip(), 
+        'B': options.get('B', '').strip(), 
+        'C': options.get('C', '').strip(), 
+        'D': options.get('D', '').strip() 
+    } 
 }
 ```
+
 - **`options.get('A', '')`**:
-    - `options` 是一个字典，存储了选项的标识符（例如 `'A'`、`'B'`、`'C'`、`'D'`）及其对应的文本内容。
-    - `get('A', '')` 尝试从字典 `options` 中获取键 `'A'` 对应的值。
-    - 如果 `options` 字典中存在键 `'A'`，就会返回其对应的值（例如 `'A. It gives children a discount.'`）。
-    - 如果 `options` 字典中不存在键 `'A'`，则返回一个默认值，这里是空字符串 `''`。
+  - `options` 是一个字典，存储了选项的标识符（例如 `'A'`、`'B'`、`'C'`、`'D'`）及其对应的文本内容。
+  - `get('A', '')` 尝试从字典 `options` 中获取键 `'A'` 对应的值。
+  - 如果 `options` 字典中存在键 `'A'`，就会返回其对应的值（例如 `'A. It gives children a discount.'`）。
+  - 如果 `options` 字典中不存在键 `'A'`，则返回一个默认值，这里是空字符串 `''`。
+  
 - **`strip()`**:
-    - `strip()` 方法用于去除字符串前后的空白字符。
-    - 假设 `options.get('A', '')` 返回的是 `'A. It gives children a discount. '` （注意末尾有一个空格），使用 `strip()` 后，字符串会变成 `'A. It gives children a discount.'`。
+  - `strip()` 方法用于去除字符串前后的空白字符。
+  - 假设 `options.get('A', '')` 返回的是 `'A. It gives children a discount. '` （注意末尾有一个空格），使用 `strip()` 后，字符串会变成 `'A. It gives children a discount.'`。
+
 #### 英文处理主函数
+
 抽取问题结果和prompt设置没有太多特别的，这里不作阐述，介绍英文处理方法
+
 ```Python
 def process_en(df): 
     res_input = []
@@ -586,16 +676,22 @@ def process_en(df):
     return res_input,res_output
     # break
 ```
+
 最终处理结果展示如下：
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240814113028.png)
+
 ### 数据合并
+
 因为微调数据只能导入jsonl或者csv文件，所以我们需要将原本的数据进行合并
 微调需要150条数据，数据处理后得到有效数据为102，从中文抽取30条，英文抽取20条组成152条数据作为微调数据(就是说有的数据是重复的)。
+
 ```python
 # 将两个列表转换为DataFrame
 df_new = pd.DataFrame({'input': cn_input+cn_input[:30]+en_input+en_input[:20], 'output': cn_output+cn_output[:30]+en_output+en_output[:20]})
 ```
+
 ### 导出jsonl文件
+
 ```python
 import json
 
@@ -608,25 +704,31 @@ with open('output.jsonl', 'w', encoding='utf-8') as f:
         # 将 JSON 字符串写入文件，并添加换行符
         f.write(row_json + '\n')
 ```
+
 - **`with open('output.jsonl', 'w', encoding='utf-8') as f:`**
-    - 以写模式 (`'w'`) 打开文件 `output.jsonl`。如果文件不存在，将会创建它。
-    - `encoding='utf-8'` 指定文件的编码为 UTF-8，这对于处理包含非 ASCII 字符的文本是很重要的。
-    - 使用 `with` 语句来确保在操作完成后自动关闭文件。
+  - 以写模式 (`'w'`) 打开文件 `output.jsonl`。如果文件不存在，将会创建它。
+  - `encoding='utf-8'` 指定文件的编码为 UTF-8，这对于处理包含非 ASCII 字符的文本是很重要的。
+  - 使用 `with` 语句来确保在操作完成后自动关闭文件。
 - **`for index, row in df_new.iterrows():`**
-    - `df_new.iterrows()` 是 `pandas` 提供的一个方法，用于逐行遍历 DataFrame。它返回一个迭代器，生成 `(index, row)` 对，其中 `index` 是当前行的索引，`row` 是一个包含该行数据的 `pandas` Series 对象。
+  - `df_new.iterrows()` 是 `pandas` 提供的一个方法，用于逐行遍历 DataFrame。它返回一个迭代器，生成 `(index, row)` 对，其中 `index` 是当前行的索引，`row` 是一个包含该行数据的 `pandas` Series 对象。
 - **`row_dict = row.to_dict()`**
-    - 将 `row`（一个 `pandas` Series 对象）转换为字典 `row_dict`。字典的键是列名，值是该行对应的单元格值。
+  - 将 `row`（一个 `pandas` Series 对象）转换为字典 `row_dict`。字典的键是列名，值是该行对应的单元格值。
 - **`row_json = json.dumps(row_dict, ensure_ascii=False,)`**
-    - 使用 `json.dumps()` 方法将 `row_dict` 转换为 JSON 字符串 `row_json`。`ensure_ascii=False` 参数确保生成的 JSON 字符串可以包含非 ASCII 字符（如中文字符），而不是将它们转义为 Unicode 码点。
+  - 使用 `json.dumps()` 方法将 `row_dict` 转换为 JSON 字符串 `row_json`。`ensure_ascii=False` 参数确保生成的 JSON 字符串可以包含非 ASCII 字符（如中文字符），而不是将它们转义为 Unicode 码点。
 - **`f.write(row_json + '\n')`**
-    - 将 JSON 字符串 `row_json` 写入到文件 `f` 中，并在每个 JSON 字符串的末尾添加换行符 `'\n'`。这样每一行的 JSON 数据将单独占据文件的一行。
+  - 将 JSON 字符串 `row_json` 写入到文件 `f` 中，并在每个 JSON 字符串的末尾添加换行符 `'\n'`。这样每一行的 JSON 数据将单独占据文件的一行。
 这样就输出了jsonl文件，将这个文件丢到(https://training.xfyun.cn/dataset/datasetIndex)即可进行微调
 
 #### jsonl和json的区别
+
 JSON（JavaScript Object Notation）和 JSONL（JSON Lines）都是用来存储和传输结构化数据的格式，但它们有一些显著的区别。
+
 ##### JSON 文件
+
 - **格式**：JSON 文件是一种结构化的文本文件，整个文件内容是一个合法的 JSON 对象或数组。它的结构通常是嵌套的，包含键值对、数组等，可以存储复杂的层次化数据。
+
   **示例：**
+
   ```json
   {
       "name": "John Doe",
@@ -644,17 +746,25 @@ JSON（JavaScript Object Notation）和 JSONL（JSON Lines）都是用来存储�
       ]
   }
   ```
+
 - **用途**：JSON 文件通常用于存储单个对象或对象数组，适合用作配置文件、API 响应格式、数据传输等。
+
 ##### JSONL 文件
+
 - **格式**：JSONL（JSON Lines）文件是一种文本文件，其中每一行都是一个独立的 JSON 对象。不同于标准的 JSON 文件，JSONL 文件没有根对象或数组，文件中的每一行都是一个独立的 JSON 对象。
+
   **示例：**
+
   ```json
   {"name": "John Doe", "age": 30, "city": "New York"}
   {"name": "Jane Doe", "age": 10, "city": "New York"}
   {"name": "Jake Doe", "age": 7, "city": "New York"}
   ```
+
 - **用途**：JSONL 文件适合存储和处理大量结构相同的记录（比如日志文件、数据集等）。每一行的数据都可以独立处理，这使得 JSONL 格式在流式处理、大规模数据集等场景中特别有用。它也可以方便地逐行读取和写入数据，而无需加载整个文件。
+  
 ##### 区别总结
+
 1. **结构**：
    - **JSON** 文件是一个完整的 JSON 对象或数组，适合存储嵌套的数据结构。
    - **JSONL** 文件由多行独立的 JSON 对象组成，适合存储结构相同的多条记录。
@@ -666,15 +776,21 @@ JSON（JavaScript Object Notation）和 JSONL（JSON Lines）都是用来存储�
    - **JSONL** 文件适合存储大量独立的记录，尤其在大数据处理或日志文件中。
 
 ## 大语言模型介绍
+
 ### 大语言模型的概念
+
 **大语言模型（英文：Large Language Model，缩写LLM**）也称大型语言模型，是一种人工智能模型，旨在理解和生成人类语言。
 通常，大语言模型 (LLM) 指包含数 **十亿**（**Billion**或更多）参数的语言模型，这些模型在大量的文本数据上进行训练，例如国外的有GPT-3 、GPT-4、PaLM 、Galactica 和 LLaMA 等，国内的有ChatGLM、文心一言、通义千问、讯飞星火等。
+
 ### 大模型的能力和特点
+
 1. **大模型的能力**
 大语言模型（LLM）与以前的预训练语言模型（PLM）的主要区别在于其涌现能力。这种能力在小型模型中不明显，但在大型模型中显著。例如：
+
 - **上下文学习**：首次由GPT-3引入，允许模型在提供自然语言指令或多个任务示例的情况下，通过理解上下文并生成相应输出来执行任务。
 - **指令遵循**：通过指令微调，LLM可以根据任务指令执行未见过的任务，展示出强大的泛化能力。
 - **逐步推理**：通过"**思维链（Chain of Thought, CoT）**"策略，LLM能够解决多步推理任务，例如数学问题。
+
 2. 大模型的特点
 - 巨大的规模：参数规模达数十亿甚至数千亿，使其能捕捉更多语言知识和复杂语法结构。
 - 预训练和微调：在大规模无标签文本数据上预训练，然后通过有标签数据微调，适应特定任务。
@@ -692,50 +808,65 @@ JSON（JavaScript Object Notation）和 JSONL（JSON Lines）都是用来存储�
 
 相当于给你一个预训练模型（Pre-trained model），基于这个模型微调（Fine Tune）。
 **预训练模型** **就是** 已经用数据集训练好了的模型。
+
 ### 两种 Finetune 范式
+
 1. 增量预训练微调 (***Continue PreTraining***)
 使用场景：让基座模型学习到一些新知识，如某个垂类领域的常识
 训练数据：文章、书籍、代码等
 2. 指令跟随微调 (***Supervised Finetuning***)
 使用场景：让模型学会对话模板，根据人类指令进行对话
 训练数据：高质量的对话、问答数据
+
 ### 为什么要*微调*？
+
 相对于从头开始训练(Training a model from scatch)，微调可以**省去大量计算资源和计算时间**，提高了计算效率,甚至提高准确率。
 **普通预训练模型**的特点是：用了大型数据集做训练，已经具备了*提取浅层基础特征和深层抽象特征*的能力。
 **不做微调**：
 （1）从头开始训练，需要大量的数据，计算时间和计算资源。
 （2）存在模型不收敛，参数不够优化，准确率低，模型泛化能力低，容易过拟合等风险。
 **使用微调**：避免了上述可能存在的问题。
+
 ### 什么情况下使用*微调*？
+
 （1） 你要使用的数据集和预训练模型的**数据集相似**
 如果不太相似，效果可能就没有那么好了，特征提取是不同的，所以相应的参数训练后也是不同的。
 （2）自己搭建或者使用的模型正确率太低。
 （3）数据集相似，但数**据集数量太少**。
 （4）**计算资源太少**。
+
 ### 不同数据集下使用微调
+
 - 数据集1 - **数据量少，但数据相似度非常高**在这种情况下，我们所做的只是**修改最后几层**或最终的softmax图层的输出类别。
 - 数据集2 - **数据量少，数据相似度低**在这种情况下，我们可以**冻结预训练模型的初始层**（比如k层），并再次训练剩余的（$n-k$）层。由于新数据集的相似度较低，因此根据新数据集对较高层进行重新训练具有重要意义。
 - 数据集3 - **数据量大，数据相似度低**在这种情况下，由于我们有一个大的数据集，我们的神经网络训练将会很有效。但是，由于我们的数据与用于训练我们的预训练模型的数据相比有很大不同。使用预训练模型进行的预测不会有效。因此，最好根据你的数据**从头开始训练**神经网络（Training from scatch）。
 - 数据集4 - **数据量大，数据相似度高**这是理想情况。在这种情况下，预训练模型应该是最有效的。使用模型的最好方法是保留模型的体系结构和模型的初始权重。然后，我们可以使用在预先训练的模型中的权重来重新训练该模型。
+  
 ### 微调指导事项
+
 1. 通常的做法是截断预先训练好的网络的*最后一层*（softmax层），并用与我们自己的问题相关的新的softmax层替换它。例如，ImageNet上预先训练好的网络带有1000个类别的softmax图层。如果我们的任务是对*10个类别*的分类，则网络的新softmax层将由10个类别组成，而不是1000个类别。然后，我们在网络上运行预先训练的权重。确保执行交叉验证，以便网络能够很好地推广。 
 2. 使用*较小的学习率*来训练网络。由于我们预计预先训练的权重相对于随机初始化的权重已经相当不错，我们不想过快地扭曲它们太多。通常的做法是使*初始学习率*比用于从头开始训练（Training from scratch）的初始学习率*小10倍*。 
 3. 如果数据集数量过少，我们进来只训练最后一层，如果数据集数量中等，*冻结预训练网络的前几层的权重也是一种常见做法*。
+
 > 这是因为前几个图层捕捉了与我们的新问题相关的通用特征，如曲线和边。我们希望保持这些权重不变。相反，我们会让网络专注于学习后续深层中特定于数据集的特征。
 
 ### LoRA
+
 LoRA是一种高效微调方法，深入了解其原理可参见博客：[知乎|深入浅出Lora](https://zhuanlan.zhihu.com/p/650197598)。
+
 #### LoRA 的优势
+
 - 可以针对不同的下游任务构建小型 LoRA 模块，从而在共享预训练模型参数基础上有效地切换下游任务。
 - LoRA 使用自适应优化器（Adaptive Optimizer），不需要计算梯度或维护大多数参数的优化器状态，训练更有效、硬件门槛更低。
 - LoRA 使用简单的线性设计，在部署时将可训练矩阵与冻结权重合并，不存在推理延迟。
 - LoRA 与其他方法正交，可以组合。
+
 #### LoRA 的原理
+
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240814121536.png)
 
-- https://github.com/microsoft/LoRA?tab=readme-ov-file
-- https://arxiv.org/pdf/2106.09685
-- https://huggingface.co/docs/peft/quicktour
+- <https://github.com/microsoft/LoRA?tab=readme-ov-file>
+- <https://arxiv.org/pdf/2106.09685>
+- <https://huggingface.co/docs/peft/quicktour>
 
 但这里我们不需要写代码进行LoRA微调，而是在讯飞开放平台上通过上传我们刚刚导出的jsonl文件，通过创建数据集，点击“去训练”，设置学习率和训练轮数进行微调，默认方法就是LoRA
-
