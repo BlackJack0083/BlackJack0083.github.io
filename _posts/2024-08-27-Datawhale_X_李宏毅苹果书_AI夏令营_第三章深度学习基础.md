@@ -25,7 +25,7 @@ comments: true
 
 $$L(\theta) \approx L(\theta') + (\theta - \theta')^T g + \frac{1}{2}(\theta - \theta')^TH(\theta - \theta') $$
 
-![image.png|500](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824154309.png)
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824154309.png)
 
 参考原本的一元函数的泰勒展开：
 
@@ -41,13 +41,15 @@ $$L(\theta) \approx L(\theta')  + \frac{1}{2}(\theta - \theta')^TH(\theta - \the
 
 用 $v$ 代替 $\theta - \theta'$ ，于是得到 $v^THv$ ，发现这个就是大一线代中学习的二次型(已经快忘光了)。那么由线性代数知识，我们知道可以根据二次型情况判断临界值种类：
 
-![image.png|550](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824161437.png)
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824161437.png)
 
 对于正定矩阵，其特征值都是正的，对应的 $L(\theta')$ 为局部最小值；反之对于负定矩阵，其特征值都是负的，对应的 $L(\theta')$ 为局部最大值；而若矩阵特征值有正有负，说明对应的 $L(\theta')$ 为鞍点。
 
 ### 例子
 
-![image.png|550](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824161939.png)
+这是一个图:
+
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824161939.png)
 
 - 中间点为鞍点：往左下和右上会降低loss，而往左上和右下会提高loss
 - 其余两排为局部最小值
@@ -57,8 +59,7 @@ loss使用SSE：
 $$L= (\hat y - w_1w_2x)^2 = (1-w_1w_2)^2$$
 
 计算梯度和Hessian矩阵，根据特征值判断临界点类型：
-
-![image.png|575](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824162659.png)
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824162659.png)
 
 ## 逃离鞍点的方法
 
@@ -79,8 +80,7 @@ $$\theta = \theta' + u$$
 ### 高维空间的临界点情况
 
 由于神经网络参数量巨大，误差表面维度很高，导致局部最小值出现的概率会非常低，大部分临界点均为鞍点。
-
-![image.png|525](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824164936.png)
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824164936.png)
 
 根据实验发现，很多情况下，局部最小值不容易出现(一方面很少有特征值均为正的情况，另一方面training loss均很小)。证明应该需要用概率论。
 
@@ -127,11 +127,12 @@ $$
 **优点**：   
 （1）一次迭代是对所有样本进行计算，此时利用矩阵进行操作，实现了**并行**。   
 （2）由全数据集确定的方向能够更好地代表样本总体，从而更准确地朝向极值所在的方向。当目标函数为**凸函数**时，BGD一定能够得到全局最优。 
+
 **缺点**：
 （1）当样本数目 $m$ 很大时，每迭代一步都需要对所有样本计算，训练过程会很慢。   
 从迭代的次数上来看，BGD迭代的次数相对较少。其迭代的收敛曲线示意图可以表示如下：
 
-![image.png|344](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240826214855.png)
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240826214855.png)
 
 （2）容易陷入局部最小值
 
@@ -210,19 +211,16 @@ plt.show()
 **随机梯度下降法**不同于批量梯度下降，随机梯度下降是**每次迭代**使用**一个样本**来对参数进行更新。使得训练速度加快。
 
 对于一个样本的目标函数：
-
 $$
 J^i\left( \theta_{0},\theta_{1} \right) =\frac{1}{2 }\left( h_{\theta} \left( x^i \right) -y^i\right)^2
 $$
 
 1. 对目标函数求偏导：
-
 $$
  \frac{\Delta J^i\left( \theta_{0},\theta_{1} \right)}{\theta j}=\left( h_{\theta}\left( x^i \right) -y^i \right) x_{j}^i
 $$
 
 2. 参数更新：
-
 $$
 \theta j:=\theta j-\alpha\left( h_{\theta}\left( x^i \right) -y^i \right) x_{j}^i
 $$
@@ -232,11 +230,12 @@ $$
 **优点**：   
 （1）由于不是在全部训练数据上的损失函数，而是在每轮迭代中，随机优化某一条训练数据上的损失函数，这样每一轮参数的更新速度大大加快。
 （2）在梯度上引入了随机噪声，在非凸优化问题中更**容易逃离局部最小值**
+
 **缺点**：   
 （1）准确度下降。即使在目标函数为强凸函数的情况下，SGD仍旧无法做到线性收敛。 
 （2）不易于并行实现。
 
-![image.png|358](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240826223120.png)
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240826223120.png)
 
 ```python
 import matplotlib.pyplot as plt
@@ -314,10 +313,12 @@ plt.show()
 > 小批量梯度下降是批量梯度下降与随机梯度下降之间的一个折中，即经过一个小批量的训练数据更新一次参数，可以保证网络训练速度不太慢，也能使训练方向不至于偏离太多，具有一定稳定性。当使用小批量梯度下降时，通常也使用SGD这个术语。[深度学习随笔——优化算法( SGD、BGD、MBGD、Momentum、NAG、Adagrad、RMSProp、AdaDelta、Adam、NAdam) - Lu1zero9的文章 - 知乎](https://zhuanlan.zhihu.com/p/588536166)
 
 **batcha_size的选择带来的影响：**   
+
 （1）在合理地范围内，增大batch_size的好处：    
 a. 内存利用率提高了，大矩阵乘法的并行化效率提高。    
 b. 跑完一次 epoch（全数据集）所需的迭代次数减少，对于相同数据量的处理速度进一步加快。    
 c. 在一定范围内，一般来说 Batch_Size 越大，其确定的下降方向越准，引起训练震荡越小。   
+
 （2）盲目增大batch_size的坏处：    
 a. 内存利用率提高了，但是内存容量可能撑不住了。    
 b. 跑完一次 epoch（全数据集）所需的迭代次数减少，要想达到相同的精度，其所花费的时间大大增加了，从而对参数的修正也就显得更加缓慢。    
@@ -516,7 +517,7 @@ $$
 
 通常用**独热编码**表示类
 
-![image.png|500](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240829114844.png)
+![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240829114844.png)
 
 分类实际过程是：输入 $x$ ，乘上 $W$ ，加上 $b$ ，通过激活函数 $σ$ ，乘上$W'$ ，再加上 $b'$ 得到向量 $\hat{y}$。但实际做分类的时候，往往会把 $\hat{y}$ 通过 softmax 函数得到 $\hat{y}$，才去计算 $\hat{y}$ 跟 $y'$ 之间的距离。
 
