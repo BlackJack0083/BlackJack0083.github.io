@@ -21,50 +21,67 @@ comments: true
 
 虽然局部最小值点无路可走(没有方向进行更新)，但是鞍点旁边还有路可以降低loss，因此我们需要判断临界点种类来帮助进一步降低loss。
 
-使用泰勒级数进行近似，$\theta'$附近的损失函数$L(\theta)$可近似为：
+使用泰勒级数进行近似， $\theta'$ 附近的损失函数 $L(\theta)$ 可近似为：
+
 $$L(\theta) \approx L(\theta') + (\theta - \theta')^T g + \frac{1}{2}(\theta - \theta')^TH(\theta - \theta') $$
+
 ![image.png|500](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824154309.png)
+
 参考原本的一元函数的泰勒展开：
+
 $$f(x) = g(x_0)+\frac{f^1(x_0)}{1!} + \frac{f^2(x_0)}{2!}+...+ \frac{f^n(x_0)}{n!}$$
+
 发现这里进行到二次展开。
 
 > [!ques] 为什么只需要展开到二次？
 > 可能与后面的解释有关，发现只需要展开到二次就已经有办法逃离鞍点了。于是不进行进一步计算微分(当然也有计算量太大的原因)。
 
-前面的$g$表示梯度，而$H$表示Hessian矩阵。这说明损失函数与两者有关。那么当损失函数达到临界点时，此时梯度$g=0$，于是损失函数可近似为：
+前面的 $g$ 表示梯度，而 $H$ 表示Hessian矩阵。这说明损失函数与两者有关。那么当损失函数达到临界点时，此时梯度$g=0$，于是损失函数可近似为：
 $$L(\theta) \approx L(\theta')  + \frac{1}{2}(\theta - \theta')^TH(\theta - \theta') $$
 
-用$v$代替$\theta - \theta'$，于是得到$v^THv$，发现这个就是大一线代中学习的二次型(已经快忘光了)。那么由线性代数知识，我们知道可以根据二次型情况判断临界值种类：
+用 $v$ 代替 $\theta - \theta'$ ，于是得到 $v^THv$ ，发现这个就是大一线代中学习的二次型(已经快忘光了)。那么由线性代数知识，我们知道可以根据二次型情况判断临界值种类：
+
 ![image.png|550](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824161437.png)
 
-对于正定矩阵，其特征值都是正的，对应的$L(\theta')$为局部最小值；反之对于负定矩阵，其特征值都是负的，对应的$L(\theta')$为局部最大值；而若矩阵特征值有正有负，说明对应的$L(\theta')$为鞍点。
+对于正定矩阵，其特征值都是正的，对应的 $L(\theta')$ 为局部最小值；反之对于负定矩阵，其特征值都是负的，对应的 $L(\theta')$ 为局部最大值；而若矩阵特征值有正有负，说明对应的 $L(\theta')$ 为鞍点。
 
 ### 例子
+
 ![image.png|550](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824161939.png)
+
 - 中间点为鞍点：往左下和右上会降低loss，而往左上和右下会提高loss
 - 其余两排为局部最小值
 
 loss使用SSE：
+
 $$L= (\hat y - w_1w_2x)^2 = (1-w_1w_2)^2$$
+
 计算梯度和Hessian矩阵，根据特征值判断临界点类型：
+
 ![image.png|575](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824162659.png)
 
 ## 逃离鞍点的方法
 
 ### 数值计算
 
-设$\lambda$为$H$的一个特征值，$u$为**对应的特征向量**。对于优化问题，可以令$u = \theta - \theta'$，则有
+设 $\lambda$ 为 $H$ 的一个特征值， $u$ 为**对应的特征向量**。对于优化问题，可以令 $u = \theta - \theta'$ ，则有
+
 $$u^THu = u^T(\lambda u) = \lambda||u||^2$$
-若 $\lambda < 0$，则$\lambda||u||^2 < 0$。所以$\frac{1}{2}u^THu < 0$，此时，根据上面的计算式得到，$L(\theta) < L(\theta')$，loss变小了，且
+
+若 $\lambda < 0$，则 $\lambda||u||^2 < 0$ 。所以 $\frac{1}{2}u^THu < 0$ ，此时，根据上面的计算式得到，$L(\theta) < L(\theta')$，loss变小了，且
+
 $$\theta = \theta' + u$$
-于是发现，如果在鞍点，可以通过找到Hessian矩阵的**负特征值**及其对应的特征向量，与$\theta'$相加，即可更新$\theta$，找到**损失更低的点**。
+
+于是发现，如果在鞍点，可以通过找到Hessian矩阵的**负特征值**及其对应的特征向量，与 $\theta'$ 相加，即可更新 $\theta$ ，找到**损失更低的点**。
 
 但一般没人计算Hessian矩阵，因为计算量太大，同时需要计算二次微分(Adam还是挺香的)。
 
 ### 高维空间的临界点情况
 
 由于神经网络参数量巨大，误差表面维度很高，导致局部最小值出现的概率会非常低，大部分临界点均为鞍点。
+
 ![image.png|525](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240824164936.png)
+
 根据实验发现，很多情况下，局部最小值不容易出现(一方面很少有特征值均为正的情况，另一方面training loss均很小)。证明应该需要用概率论。
 
 # 批量和动量
@@ -81,24 +98,30 @@ $$\theta = \theta' + u$$
 > [!question] 批量大小有什么影响？
 > 引用：[梯度下降法的三种形式BGD、SGD、MBGD及python实现-腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1604182)
 > 举个例子，以一个特征的线性回归为例
+>
 > $$h_{\theta}\left( x^i \right) =\theta_{1}x^i+\theta_{0}$$
 > 
 
 ### BGD
 
 对于一批样本，对应的目标函数为：
+
 $$J\left( \theta_{0},\theta_{1} \right) =\frac{1}{2m}\sum_{i=1}^{m}\left( h_{\theta}\left( x^i \right) -y^i  \right)^2 $$
 
 **批量梯度下降法**是最原始的形式，它是指在**每一次迭代时**使用**所有样本**来进行梯度的更新。从数学上理解如下
 1. 对目标函数求偏导：
+
 $$
 \frac{\Delta J\left( \theta_{0},\theta_{1} \right)}{\Delta \theta_{j}}=\frac{1}{m}\sum_{i=1}^{m} \left( h_{\theta }\left( x^i \right) -y^i \right) x_{j}^i
 $$
-其中，$i=1,2,\dots,m$表示样本数，$j=0,1$表示特征数，其中$x_{0}^i=1$(算一下就出来了)
+
+其中， $i=1,2,\dots,m$ 表示样本数， $j=0,1$ 表示特征数，其中 $x_{0}^i=1$ (算一下就出来了)
 2. 每次迭代对参数进行更新
+
 $$
 \theta j:=\theta j-\alpha\frac{1}{m}\sum_{i=1}^{m}\left( h_{\theta}\left( x^i \right) -y^i \right) x_{j}^i
 $$
+
 注意这里的求和函数，即对所有样本进行计算，随后取平均
 
 **优点**：   
@@ -107,8 +130,11 @@ $$
 **缺点**：
 （1）当样本数目 $m$ 很大时，每迭代一步都需要对所有样本计算，训练过程会很慢。   
 从迭代的次数上来看，BGD迭代的次数相对较少。其迭代的收敛曲线示意图可以表示如下：
+
 ![image.png|344](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240826214855.png)
+
 （2）容易陷入局部最小值
+
 ```python
 import matplotlib.pyplot as plt
 import random
@@ -184,17 +210,23 @@ plt.show()
 **随机梯度下降法**不同于批量梯度下降，随机梯度下降是**每次迭代**使用**一个样本**来对参数进行更新。使得训练速度加快。
 
 对于一个样本的目标函数：
+
 $$
 J^i\left( \theta_{0},\theta_{1} \right) =\frac{1}{2 }\left( h_{\theta} \left( x^i \right) -y^i\right)^2
 $$
+
 1. 对目标函数求偏导：
+
 $$
  \frac{\Delta J^i\left( \theta_{0},\theta_{1} \right)}{\theta j}=\left( h_{\theta}\left( x^i \right) -y^i \right) x_{j}^i
 $$
+
 2. 参数更新：
+
 $$
 \theta j:=\theta j-\alpha\left( h_{\theta}\left( x^i \right) -y^i \right) x_{j}^i
 $$
+
 这里不再有求和符号。
 
 **优点**：   
@@ -203,6 +235,7 @@ $$
 **缺点**：   
 （1）准确度下降。即使在目标函数为强凸函数的情况下，SGD仍旧无法做到线性收敛。 
 （2）不易于并行实现。
+
 ![image.png|358](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240826223120.png)
 
 ```python
@@ -318,9 +351,11 @@ $$
 \vdots
 \end{gather}
 $$
+
 引入动量后，每次在移动参数的时候，不是只往梯度的反方向来移动参数，而是根据梯度的反方向加上前一步移动的方向决定移动方向。 
 
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240826225530.png)
+
 一般梯度下降走到一个局部最小值或鞍点时，就被困住了。但有动量还是有办法继续走下去，因为动量不是只看梯度，还看**前一步的方向**。即使梯度方向往左走，但如果前一步的影响力比梯度要大，球还是有可能继续往右走，甚至翻过一个小丘，也许可以走到更好的局部最小值，这就是动量有可能带来的好处 。
 
 该算法通过对梯度的一阶矩进行估计，使得梯度可以在横向上累积，在纵向上相互抵消，从而使更新震荡幅度减小，加快更新的速度。
@@ -336,7 +371,8 @@ $$
 > 举个例子，我们有两个参数 $w$ 和 $b$，这两个参数值不一样的时候，损失值也不一样，得到了误差表面，该误差表面的最低点在叉号处。事实上，该误差表面是凸的形状。凸的误差表面的等高线是椭圆形的，椭圆的长轴非常长，短轴相比之下比较短，其在横轴的方向梯度非常小，坡度的变化非常小，非常平坦；其在纵轴的方向梯度变化非常大，误差表面的坡度非常陡峭。现在我们要从黑点（初始点）来做梯度下降。
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240827120801.png)
 
-a图是$\eta=10^{-2}$的误差表面，发现因为太大了所以一直在震荡；但当把$\eta$设为$10^{-7}$时，参数会到山谷，但因为坡度非常平坦到不了终点
+a图是 $\eta=10^{-2}$ 的误差表面，发现因为太大了所以一直在震荡；但当把 $\eta$ 设为 $10^{-7}$ 时，参数会到山谷，但因为坡度非常平坦到不了终点
+
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240827120825.png)
 
 为了解决这些问题，提出了自适应学习率
@@ -346,27 +382,36 @@ a图是$\eta=10^{-2}$的误差表面，发现因为太大了所以一直在震�
 AdaGrad 可以做到梯度比较大的时候，学习率就减小，梯度比较小的时候，学习率就放大。
 
 梯度下降更新某个参数 $θ^i_{t}$ 的过程为
+
 $$
 \mathbf{\theta_{t+1}^i \leftarrow \mathbf{\theta_{t}^i} - \frac{\eta}{\sigma_{0}^i}\mathbf{g_{t}^i}}
 $$
-其中$\mathbf{\theta_{0}^i}$为初始化参数。而$\sigma_{0}^i$的计算过程为：
+
+其中 $\mathbf{\theta_{0}^i}$ 为初始化参数。而 $\sigma_{0}^i$ 的计算过程为：
+
 $$
 \sigma_{0}^i=\sqrt{ \left( \mathbf{g_{0}^i} \right) ^2 }=|\mathbf{g_{0}^i|}
 $$
-将初值带入得到$\frac{\mathbf{g_{0}^i}}{\sigma_{0}^i}$的值是+1或-1，此时与梯度大小无关。但后面的参数更新则有变化：
-第$t+1$次更新参数的时候，即
+
+将初值带入得到 $\frac{\mathbf{g_{0}^i}}{\sigma_{0}^i}$ 的值是+1或-1，此时与梯度大小无关。但后面的参数更新则有变化：
+第 $t+1$ 次更新参数的时候，即
+
 $$
 \mathbf{\theta_{t+1}^i}\leftarrow \mathbf{\theta_{i}^i}-\frac{\eta}{\sigma_{t}^i}\mathbf{g_{t}^i}, \quad \sigma_{t}^i=\sqrt{ \frac{1}{t+1}\sum_{i=0}^{t}\left( \mathbf{g_{t}^i} \right) ^2 }
 $$
-当梯度大的时候，分母$\sigma_{t}^i$就会变大，此时学习率变小；反之，当梯度小的时候，学习率就会变大，从而实现根据梯度调节学习率
+
+当梯度大的时候，分母 $\sigma_{t}^i$ 就会变大，此时学习率变小；反之，当梯度小的时候，学习率就会变大，从而实现根据梯度调节学习率
+
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240827123518.png)
 ## RMSProp
 >RMSprop 没有论文，Geoffrey Hinton 在 Coursera 上开过深度学习的课程，他在他的课程里面讲了 RMSprop，如果要引用，需要引用对应视频的链接。
 
 同一个参数的同个方向，学习率也是需要动态调整的。RMSProp可以通过一个参数$\alpha$控制梯度的重要性，从而更灵活调整
+
 $$
 \mathbf{\theta_{t+1}^i}\leftarrow \mathbf{\theta_{i}^i}-\frac{\eta}{\sigma_{t}^i}\mathbf{g_{t}^i}, \quad \sigma_{t}^i=\sqrt{ \alpha \left( \sigma_{t-1}^i \right) ^2+(1-\alpha)\left( \mathbf{g_{t}^i} \right) ^2 }
 $$
+
 在 RMSprop 里面，可以自己调整现在的这个梯度的重要性。如果 α 设很小趋近于 0，代表 $g_{t}^i$ 相较于之前算出来的梯度而言，比较重要；如果 α 设很大趋近于 1，代表 $g_{t}^i$ 比较不重要，之前算出来的梯度比较重要。
 
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240827124225.png)
@@ -381,6 +426,7 @@ $$
 在PyTorch中，调用Adam优化器非常简单。以下是使用Adam优化器的基本步骤：
 1. **导入必要的库**：
    首先，你需要导入PyTorch及其子模块torch.optim。
+
    ```python
    import torch
    from torch.optim import Adam
@@ -388,6 +434,7 @@ $$
 
 2. **定义模型**：
    你需要有一个PyTorch模型，该模型的参数将由Adam优化器进行优化。
+
    ```python
    class MyModel(nn.Module):
        def __init__(self):
@@ -405,19 +452,25 @@ $$
 
    model = MyModel()
    ```
+
 3. **选择优化器**：
    使用`torch.optim.Adam`创建一个优化器实例，传入模型的参数和学习率等参数。
+
    ```python
    optimizer = Adam(model.parameters(), lr=0.001)
    ```
+
    这里`model.parameters()`返回模型的所有参数，`lr`是学习率($\alpha$通常取默认值)。另外可能还有个权重衰减率`weight decay`负责控制模型复杂度
 4. **定义损失函数**：
    选择一个损失函数，例如交叉熵损失或均方误差损失。
+
    ```python
    criterion = nn.CrossEntropyLoss()  # 举例
    ```
+   
 5. **训练模型**：
    在训练循环中，使用优化器来更新模型的参数。
+
    ```python
    for epoch in range(num_epochs):
        for data, target in train_loader:  # 假设train_loader是数据加载器
@@ -430,8 +483,10 @@ $$
            loss.backward()       # 反向传播，计算梯度
            optimizer.step()      # 更新参数
    ```
+
 6. **保存模型**：
    训练完成后，你可以保存模型的参数。
+
    ```python
    torch.save(model.state_dict(), 'model.pth')
    ```
@@ -439,12 +494,15 @@ $$
 ## 学习率调度
 
 防止梯度爆炸问题
+
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240827124738.png)
 
 之前的学习率调整方法中 $η$ 是一个固定的值，而在学习率调度中 $η$ 跟时间有关
+
 ### 学习率衰减
 
 随着参数的不断更新，让 $η$ 越来越小
+
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240827124842.png)
 ![image.png](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240827124922.png)
 
@@ -454,26 +512,30 @@ $$
 
 # 分类
 
-回归是输入一个向量 $x$，输出 $\hat{y}$，我们希望 $\hat{y}$ 跟某一个标签 $y$ 越接近越好，$y$ 是要学习的目标。而分类可当作回归来看，输入 $x$ 后，输出仍然是一个标量 $\hat{y}$，要让它跟正确答案的那个类越接近越好。
+回归是输入一个向量 $x$ ，输出 $\hat{y}$，我们希望 $\hat{y}$ 跟某一个标签 $y$ 越接近越好，$y$ 是要学习的目标。而分类可当作回归来看，输入 $x$ 后，输出仍然是一个标量 $\hat{y}$，要让它跟正确答案的那个类越接近越好。
 
 通常用**独热编码**表示类
 
 ![image.png|500](https://cdn.jsdelivr.net/gh/BlackJack0083/image@main/img/20240829114844.png)
 
-分类实际过程是：输入 $x$，乘上 $W$，加上 $b$，通过激活函数 $σ$，乘上$W'$，再加上 $b'$ 得到向量 $\\hat{y}$。但实际做分类的时候，往往会把 $\\hat{y}$ 通过 softmax 函数得到 $\hat{y}$，才去计算 $\hat{y}$ 跟 $y'$ 之间的距离。
+分类实际过程是：输入 $x$ ，乘上 $W$ ，加上 $b$ ，通过激活函数 $σ$ ，乘上$W'$ ，再加上 $b'$ 得到向量 $\hat{y}$。但实际做分类的时候，往往会把 $\hat{y}$ 通过 softmax 函数得到 $\hat{y}$，才去计算 $\hat{y}$ 跟 $y'$ 之间的距离。
 
 softmax会将**结果进行归一化**，同时**使得大的值和小的值的差距变大**
+
 $$
 y'=\frac{\exp(y_{i})}{\sum_{j}^{}\exp(y_{i})}
 $$
+
 其中，$1>y_{i}'>0, \sum_{i}^{}y_{i}'=1$
 
 ## 损失函数
 
 对于分类问题，通常采用交叉熵作为损失函数：
+
 $$
 e=-\sum_{i}^{}y_{i}\ln y_{i}'
 $$
+
 [分类问题为什么用交叉熵损失不用 MSE 损失_为什么分类问题不能使用mse损失函数-CSDN博客](https://blog.csdn.net/wxc971231/article/details/123866413)
 具体来说，有三个原因：
 - 概率角度看，优化MSE损失等价于高斯分布的最大似然估计，而优化交叉熵损失等价于多项式分布的最大似然
