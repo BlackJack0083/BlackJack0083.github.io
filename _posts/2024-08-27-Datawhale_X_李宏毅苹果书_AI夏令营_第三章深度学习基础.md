@@ -212,7 +212,7 @@ plt.show()
 
 对于一个样本的目标函数：
 $$
-J^i\left( \theta_{0},\theta_{1} \right) =\frac{1}{2 }\left( h_{\theta} \left( x^i \right) -y^i\right)^2
+J^i\left( \theta_{0},\theta_{1} \right) =\frac{1}{2}\left( h_{\theta} \left( x^i \right) -y^i\right)^2
 $$
 
 1. 对目标函数求偏导：
