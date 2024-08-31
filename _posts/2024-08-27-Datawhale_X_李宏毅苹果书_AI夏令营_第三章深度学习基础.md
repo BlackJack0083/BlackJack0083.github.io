@@ -67,9 +67,9 @@ $$L= (\hat y - w_1w_2x)^2 = (1-w_1w_2)^2$$
 
 设 $\lambda$ 为 $H$ 的一个特征值， $u$ 为**对应的特征向量**。对于优化问题，可以令 $u = \theta - \theta'$ ，则有
 
-$$u^THu = u^T(\lambda u) = \lambda||u||^2$$
+$$u^THu = u^T(\lambda u) = \lambda \Vert u \Vert ^2$$
 
-若 $\lambda < 0$，则 $\lambda||u||^2 < 0$ 。所以 $\frac{1}{2}u^THu < 0$ ，此时，根据上面的计算式得到，$L(\theta) < L(\theta')$，loss变小了，且
+若 $\lambda < 0$，则 $\lambda \Vert u \Vert ^2 < 0$ 。所以 $\frac{1}{2}u^THu < 0$ ，此时，根据上面的计算式得到，$L(\theta) < L(\theta')$，loss变小了，且
 
 $$\theta = \theta' + u$$
 
